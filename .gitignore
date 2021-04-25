@@ -5,6 +5,9 @@
 *.so
 *.dylib
 
+# Generated Go binary
+xclarity_extract
+
 # Test binary, built with `go test -c`
 *.test
 
