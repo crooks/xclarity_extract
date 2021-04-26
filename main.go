@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-    "path"
+	"path"
 	"strings"
 	"time"
 
@@ -45,10 +45,10 @@ func newConfig(filename string) (*Config, error) {
 }
 
 func parseFlags() {
-    home, err := os.UserHomeDir()
-    if err !=  nil {
-        log.Fatal("Unable to determine user's homedir")
-    }
+	home, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal("Unable to determine user's homedir")
+	}
 	flag.StringVar(
 		&flagConfigFile,
 		"config",
@@ -70,23 +70,32 @@ func parser(url string) {
 	}
 }
 
+// nodeMemory iterates over all the memory modules and returns a total
+func nodeMemory(modules gjson.Result) (memory int64) {
+	for _, module := range modules.Array() {
+		memory += module.Get("capacity").Int()
+	}
+	return
+}
+
 // nodeParser parses the json output from the XClarity API (https://<xclarity_server>/nodes)
 func nodeParser(j gjson.Result) {
 	for _, jn := range j.Array() {
-        sockets := jn.Get("processors").Array()
-        // If there aren't any CPUs, we don't want it
-        if len(sockets) < 1 {
-            continue
-        }
-        cores := jn.Get("processors.0.cores").Int()
-        fmt.Printf(
-            "%s,%s,%s,%d,%d\n",
-		    strings.ToLower(jn.Get("name").String()),
-            jn.Get("serialNumber").String(),
-            jn.Get("model").String(),
-            len(sockets),
-            cores,
-        )
+		sockets := jn.Get("processors").Array()
+		// If there aren't any CPUs, we don't want it
+		if len(sockets) < 1 {
+			continue
+		}
+		cores := jn.Get("processors.0.cores").Int()
+		fmt.Printf(
+			"%s,%s,%s,%d,%d,%d\n",
+			strings.ToLower(jn.Get("name").String()),
+			jn.Get("serialNumber").String(),
+			jn.Get("model").String(),
+			len(sockets),
+			cores,
+			nodeMemory(jn.Get("memoryModules")),
+		)
 	}
 }
 
