@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+    "path"
 	"strings"
 	"time"
 
@@ -44,10 +45,14 @@ func newConfig(filename string) (*Config, error) {
 }
 
 func parseFlags() {
+    home, err := os.UserHomeDir()
+    if err !=  nil {
+        log.Fatal("Unable to determine user's homedir")
+    }
 	flag.StringVar(
 		&flagConfigFile,
 		"config",
-		"xclarity_extract.yml",
+		path.Join(home, "xclarity_extract.yml"),
 		"Path to xclarity_extract configuration file",
 	)
 	flag.Parse()
