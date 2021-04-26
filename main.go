@@ -68,8 +68,20 @@ func parser(url string) {
 // nodeParser parses the json output from the XClarity API (https://<xclarity_server>/nodes)
 func nodeParser(j gjson.Result) {
 	for _, jn := range j.Array() {
-		node := strings.ToLower(jn.Get("name").String())
-		fmt.Println(node)
+        sockets := jn.Get("processors").Array()
+        // If there aren't any CPUs, we don't want it
+        if len(sockets) < 1 {
+            continue
+        }
+        cores := jn.Get("processors.0.cores").Int()
+        fmt.Printf(
+            "%s,%s,%s,%d,%d\n",
+		    strings.ToLower(jn.Get("name").String()),
+            jn.Get("serialNumber").String(),
+            jn.Get("model").String(),
+            len(sockets),
+            cores,
+        )
 	}
 }
 
