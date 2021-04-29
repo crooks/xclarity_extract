@@ -7,8 +7,8 @@ import (
 	"os"
 	"path"
 	"strings"
-	"time"
 
+    "github.com/crooks/xclarity_extract/xcapi"
 	"github.com/tidwall/gjson"
 	"gopkg.in/yaml.v2"
 )
@@ -21,11 +21,10 @@ var (
 // Configuration structure
 type Config struct {
 	API struct {
-		BaseURL  string        `yaml:"base_url"`
-		CertFile string        `yaml:"certfile"`
-		Interval time.Duration `yaml:"interval"`
-		Password string        `yaml:"password"`
-		Username string        `yaml:"username"`
+		BaseURL  string `yaml:"base_url"`
+		CertFile string `yaml:"certfile"`
+		Password string `yaml:"password"`
+		Username string `yaml:"username"`
 	}
 }
 
@@ -45,14 +44,10 @@ func newConfig(filename string) (*Config, error) {
 }
 
 func parseFlags() {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		log.Fatal("Unable to determine user's homedir")
-	}
 	flag.StringVar(
 		&flagConfigFile,
 		"config",
-		path.Join(home, "xclarity_extract.yml"),
+		path.Join("/etc/xclarity", "xclarity_extract.yml"),
 		"Path to xclarity_extract configuration file",
 	)
 	flag.Parse()
@@ -60,14 +55,13 @@ func parseFlags() {
 
 // parser is the main loop that endlessly fetches URLs and parses them into
 // Prometheus metrics
-func parser(url string) {
-	client := newBasicAuthClient(cfg.API.Username, cfg.API.Password)
-	j, err := client.getJSON(url, "nodeList")
+func parser(url string) gjson.Result {
+	client := xcapi.NewBasicAuthClient(cfg.API.Username, cfg.API.Password, cfg.API.CertFile)
+	bytes, err := client.GetJSON(url)
 	if err != nil {
-		log.Printf("Parsing %s returned: %v", url, err)
-	} else {
-		nodeParser(j)
+		log.Fatal("Parsing %s returned: %v", url, err)
 	}
+	return gjson.GetBytes(bytes, "nodeList")
 }
 
 // nodeMemory iterates over all the memory modules and returns a total
@@ -107,5 +101,6 @@ func main() {
 		log.Fatalf("Unable to parse config file: %v", err)
 	}
 	nodeURL := fmt.Sprintf("%s/nodes", cfg.API.BaseURL)
-	parser(nodeURL)
+	j := parser(nodeURL)
+	nodeParser(j)
 }

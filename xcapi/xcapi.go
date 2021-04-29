@@ -1,4 +1,4 @@
-package main
+package xcapi
 
 import (
 	"crypto/tls"
@@ -7,8 +7,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-
-	"github.com/tidwall/gjson"
 )
 
 // authClient contains the HTTP client components
@@ -18,33 +16,34 @@ type authClient struct {
 	HTTPClient *http.Client
 }
 
-// newBasicAuthClient returns an instance of authClient
-func newBasicAuthClient(username, password string) *authClient {
+// NewBasicAuthClient returns an instance of authClient
+func NewBasicAuthClient(username, password, certFile string) *authClient {
 	return &authClient{
 		Username:   username,
 		Password:   password,
-		HTTPClient: httpAuthClient(),
+		HTTPClient: httpAuthClient(certFile),
 	}
 }
 
-// getJSON expects a URL and a top-level json dict name to scrape.  It returns
+// GetJSON expects a URL and a top-level json dict name to scrape.  It returns
 // that dict name as a gjson object.
-func (s *authClient) getJSON(url, tlj string) (gjson.Result, error) {
+func (s *authClient) GetJSON(url string) ([]byte, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return gjson.Result{}, fmt.Errorf("request error: %v", err)
+		return nil, fmt.Errorf("request error: %v", err)
 	}
 	bytes, err := s.doRequest(req)
 	if err != nil {
-		return gjson.Result{}, fmt.Errorf("node request error: %v", err)
+		return nil, fmt.Errorf("node request error: %v", err)
 	}
-	return gjson.GetBytes(bytes, tlj), nil
+	//return gjson.GetBytes(bytes, tlj), nil
+	return bytes, nil
 }
 
 // httpAuthClient creates a new instance of http.Client with support for
 // additional rootCAs.  As XClarity is frequently installed as an appliance,
 // with a self-signed cert, this appears to be quite useful.
-func httpAuthClient() *http.Client {
+func httpAuthClient(certFile string) *http.Client {
 	rootCAs, err := x509.SystemCertPool()
 	if err != nil {
 		log.Fatal(err)
@@ -52,7 +51,7 @@ func httpAuthClient() *http.Client {
 	if rootCAs == nil {
 		rootCAs = x509.NewCertPool()
 	}
-	certs, err := ioutil.ReadFile(cfg.API.CertFile)
+	certs, err := ioutil.ReadFile(certFile)
 	if err != nil {
 		log.Println("No additional certificates imported")
 	} else if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
