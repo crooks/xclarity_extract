@@ -1,3 +1,5 @@
+github.com/crooks/xclarity_extract/xcapi v0.0.0-20210429192524-8d7006abc6b5 h1:KX8pm2eHBPm35gvEXn/5LQNBSydTpw2MMbbL7vtKubU=
+github.com/crooks/xclarity_extract/xcapi v0.0.0-20210429192524-8d7006abc6b5/go.mod h1:N/cjkPWUidznE2d9ZNUUOxgpiVSylXukSteK8VhYvhQ=
 github.com/tidwall/gjson v1.7.5 h1:zmAN/xmX7OtpAkv4Ovfso60r/BiCi5IErCDYGNJu+uc=
 github.com/tidwall/gjson v1.7.5/go.mod h1:5/xDoumyyDNerp2U36lyolv46b3uF/9Bu6OfyQ9GImk=
 github.com/tidwall/match v1.0.3 h1:FQUVvBImDutD8wJLN6c5eMzWtjgONK9MwIBCOrUJKeE=

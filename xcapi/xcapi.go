@@ -3,10 +3,12 @@ package xcapi
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 )
 
 // authClient contains the HTTP client components
@@ -25,18 +27,16 @@ func NewBasicAuthClient(username, password, certFile string) *authClient {
 	}
 }
 
-// GetJSON expects a URL and a top-level json dict name to scrape.  It returns
-// that dict name as a gjson object.
+// GetJSON takes a URL relating to a Rest API and returns the resulting JSON as a byte slice.
 func (s *authClient) GetJSON(url string) ([]byte, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("request error: %v", err)
+		return nil, err
 	}
 	bytes, err := s.doRequest(req)
 	if err != nil {
-		return nil, fmt.Errorf("node request error: %v", err)
+		return nil, err
 	}
-	//return gjson.GetBytes(bytes, tlj), nil
 	return bytes, nil
 }
 
@@ -52,10 +52,12 @@ func httpAuthClient(certFile string) *http.Client {
 		rootCAs = x509.NewCertPool()
 	}
 	certs, err := ioutil.ReadFile(certFile)
-	if err != nil {
+	if errors.Is(err, os.ErrNotExist) {
 		log.Println("No additional certificates imported")
+	} else if err != nil {
+		panic(err)
 	} else if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
-		log.Println("No certs imported.  Proceeding with system CAs.")
+		log.Println("Cert import failed.  Proceeding with system CAs.")
 	}
 	config := &tls.Config{
 		InsecureSkipVerify: false,
@@ -70,15 +72,15 @@ func (s *authClient) doRequest(req *http.Request) ([]byte, error) {
 	req.SetBasicAuth(s.Username, s.Password)
 	resp, err := s.HTTPClient.Do(req)
 	if err != nil {
-		log.Fatalf("HTTP request error: %v\n", err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalf("Response error: %v\n", err)
+		return nil, err
 	}
 	if resp.StatusCode != 200 {
-		log.Fatalf("Status error: %s\n", string(body))
+		return nil, fmt.Errorf("Status error: %s\n", string(body))
 	}
 	return body, nil
 }

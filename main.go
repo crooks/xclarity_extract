@@ -6,9 +6,10 @@ import (
 	"log"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 
-    "github.com/crooks/xclarity_extract/xcapi"
+	"github.com/crooks/xclarity_extract/xcapi"
 	"github.com/tidwall/gjson"
 	"gopkg.in/yaml.v2"
 )
@@ -16,6 +17,7 @@ import (
 var (
 	cfg            *Config
 	flagConfigFile string
+	cpuCodeRE      = regexp.MustCompile(`[\s-]([2568]\d{3})\s`)
 )
 
 // Configuration structure
@@ -72,6 +74,23 @@ func nodeMemory(modules gjson.Result) (memory int64) {
 	return
 }
 
+// cpuDesc2Code attempts to extract a meaningful CPU code from the unstructured displayName field
+func cpuDesc2Code(desc string) string {
+	// Highest priority: Look for a 4 digit Xeon-style CPU code
+	res := cpuCodeRE.FindAllStringSubmatch(desc, -1)
+	if len(res) == 1 {
+		// One match is excellent, return the submatch
+		return res[0][1]
+	} else if len(res) > 1 {
+		// More than a single match suggests Regex refinement is required.
+		// Make the bold assumption that the first match is good.
+		log.Printf("Multiple CPU code matches: %v", res)
+		return res[0][1]
+	}
+	// No matches found
+	return "Unknown"
+}
+
 // nodeParser parses the json output from the XClarity API (https://<xclarity_server>/nodes)
 func nodeParser(j gjson.Result) {
 	for _, jn := range j.Array() {
@@ -80,14 +99,16 @@ func nodeParser(j gjson.Result) {
 		if len(sockets) < 1 {
 			continue
 		}
-		cores := jn.Get("processors.0.cores").Int()
+		// Name Serial Model CPU Speed Sockets Cores Memory
 		fmt.Printf(
-			"%s,%s,%s,%d,%d,%d\n",
+			"%-20s %-10s %-10s %-8s %1.2f %1d %2d %4d\n",
 			strings.ToLower(jn.Get("name").String()),
 			jn.Get("serialNumber").String(),
 			jn.Get("model").String(),
+			cpuDesc2Code(jn.Get("processors.0.displayName").String()),
+			jn.Get("processors.0.speed").Float(),
 			len(sockets),
-			cores,
+			jn.Get("processors.0.cores").Int(),
 			nodeMemory(jn.Get("memoryModules")),
 		)
 	}
