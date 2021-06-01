@@ -15,10 +15,8 @@ import (
 )
 
 var (
-	cfg            *Config
-	flagConfigFile string
-	flagRawOutput  bool
-	cpuCodeRE      = regexp.MustCompile(`[\s-]([2568]\d{3})\s`)
+	cfg       *Config
+	cpuCodeRE = regexp.MustCompile(`[\s-]([2568]\d{3})\s`)
 )
 
 // Configuration structure
@@ -29,6 +27,11 @@ type Config struct {
 		Password string `yaml:"password"`
 		Username string `yaml:"username"`
 	}
+}
+
+type Flag struct {
+	configFile string
+	rawOutput  bool
 }
 
 func newConfig(filename string) (*Config, error) {
@@ -46,20 +49,22 @@ func newConfig(filename string) (*Config, error) {
 	return config, nil
 }
 
-func parseFlags() {
+func parseFlags() *Flag {
+	f := new(Flag)
 	flag.StringVar(
-		&flagConfigFile,
+		&f.configFile,
 		"config",
 		path.Join("/etc/xclarity", "xclarity_extract.yml"),
 		"Path to xclarity_extract configuration file",
 	)
 	flag.BoolVar(
-		&flagRawOutput,
+		&f.rawOutput,
 		"raw",
 		false,
 		"Output raw JSON",
 	)
 	flag.Parse()
+	return f
 }
 
 // parser is the main loop that endlessly fetches URLs and parses them into
@@ -123,14 +128,14 @@ func nodeParser(j gjson.Result) {
 
 func main() {
 	var err error
-	parseFlags()
-	cfg, err = newConfig(flagConfigFile)
+	f := parseFlags()
+	cfg, err = newConfig(f.configFile)
 	if err != nil {
 		log.Fatalf("Unable to parse config file: %v", err)
 	}
 	nodeURL := fmt.Sprintf("%s/nodes", cfg.API.BaseURL)
 	j := parser(nodeURL)
-	if flagRawOutput {
+	if f.rawOutput {
 		fmt.Println(j)
 	} else {
 		nodeParser(j)
