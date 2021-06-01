@@ -17,6 +17,7 @@ import (
 var (
 	cfg            *Config
 	flagConfigFile string
+	flagRawOutput  bool
 	cpuCodeRE      = regexp.MustCompile(`[\s-]([2568]\d{3})\s`)
 )
 
@@ -51,6 +52,12 @@ func parseFlags() {
 		"config",
 		path.Join("/etc/xclarity", "xclarity_extract.yml"),
 		"Path to xclarity_extract configuration file",
+	)
+	flag.BoolVar(
+		&flagRawOutput,
+		"raw",
+		false,
+		"Output raw JSON",
 	)
 	flag.Parse()
 }
@@ -123,5 +130,9 @@ func main() {
 	}
 	nodeURL := fmt.Sprintf("%s/nodes", cfg.API.BaseURL)
 	j := parser(nodeURL)
-	nodeParser(j)
+	if flagRawOutput {
+		fmt.Println(j)
+	} else {
+		nodeParser(j)
+	}
 }
