@@ -31,6 +31,7 @@ type Config struct {
 
 type Flag struct {
 	configFile string
+	chassis    bool
 	rawOutput  bool
 }
 
@@ -58,6 +59,12 @@ func parseFlags() *Flag {
 		"Path to xclarity_extract configuration file",
 	)
 	flag.BoolVar(
+		&f.chassis,
+		"chassis",
+		false,
+		"Output chassis details instead of node",
+	)
+	flag.BoolVar(
 		&f.rawOutput,
 		"raw",
 		false,
@@ -69,13 +76,13 @@ func parseFlags() *Flag {
 
 // parser is the main loop that endlessly fetches URLs and parses them into
 // Prometheus metrics
-func parser(url string) gjson.Result {
+func parser(url, jsonPath string) gjson.Result {
 	client := xcapi.NewBasicAuthClient(cfg.API.Username, cfg.API.Password, cfg.API.CertFile)
 	bytes, err := client.GetJSON(url)
 	if err != nil {
 		log.Fatal("Parsing %s returned: %v", url, err)
 	}
-	return gjson.GetBytes(bytes, "nodeList")
+	return gjson.GetBytes(bytes, jsonPath)
 }
 
 // nodeMemory iterates over all the memory modules and returns a total
@@ -133,9 +140,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to parse config file: %v", err)
 	}
-	nodeURL := fmt.Sprintf("%s/nodes", cfg.API.BaseURL)
-	j := parser(nodeURL)
-	if f.rawOutput {
+	var j gjson.Result
+	if f.chassis {
+		apiURL := fmt.Sprintf("%s/chassis", cfg.API.BaseURL)
+		j = parser(apiURL, "chassisList")
+	} else {
+		apiURL := fmt.Sprintf("%s/nodes", cfg.API.BaseURL)
+		j = parser(apiURL, "nodeList")
+	}
+	// TODO: Add chassis processing code.
+	if f.rawOutput || f.chassis {
 		fmt.Println(j)
 	} else {
 		nodeParser(j)
