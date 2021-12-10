@@ -51,14 +51,16 @@ func httpAuthClient(certFile string) *http.Client {
 	if rootCAs == nil {
 		rootCAs = x509.NewCertPool()
 	}
-	certs, err := ioutil.ReadFile(certFile)
-	if errors.Is(err, os.ErrNotExist) {
-		log.Println("No additional certificates imported")
-	} else if err != nil {
-		panic(err)
-	} else if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
-		log.Println("Cert import failed.  Proceeding with system CAs.")
-	}
+    if certFile != "" {
+        certs, err := ioutil.ReadFile(certFile)
+        if errors.Is(err, os.ErrNotExist) {
+            log.Println("No additional certificates imported")
+        } else if err != nil {
+            panic(err)
+        } else if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
+            log.Println("Cert import failed.  Proceeding with system CAs.")
+        }
+    }
 	config := &tls.Config{
 		InsecureSkipVerify: false,
 		RootCAs:            rootCAs,
